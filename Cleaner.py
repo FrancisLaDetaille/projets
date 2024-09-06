@@ -3,54 +3,54 @@ from tkinter import filedialog, messagebox
 import pandas as pd
 import os
 
-# Lien vers le fichier Google Sheets contenant les groupes de spécialités
+# URL for Google Sheets with specialty groups
 specialites_url = 'https://docs.google.com/spreadsheets/d/14Dzb6p-Y2nTdeNIKm5avvu2bHW8Iuj9PTrnz512TTZU/pub?gid=0&single=true&output=csv'
 blacklist_url = 'https://docs.google.com/spreadsheets/d/1UJlFqLqJub0I9N_X_VbArX_QUlgnB-7cl95URrDzkEU/gviz/tq?tqx=out:csv&sheet=Blacklist'
 
 class Application(tk.Tk):
     def __init__(self):
         super().__init__()
-        self.title("Nettoyage de CSV")
+        self.title("CSV Cleaner")
         self.geometry("400x250")
 
-        # Initialisation des groupes de spécialités
-        self.categories_pro = self.charger_specialites()
+        # Load specialty groups
+        self.categories_pro = self.load_specialties()
 
-        # Configurer un grid avec des colonnes et lignes vides autour pour centrer
+        # Configure grid layout
         self.grid_columnconfigure(0, weight=1)
         self.grid_columnconfigure(2, weight=1)
         self.grid_rowconfigure(0, weight=1)
         self.grid_rowconfigure(4, weight=1)
 
-        # Boutons pour choisir fichier et lancer le nettoyage
-        tk.Button(self, text="Choisir le fichier CSV", command=self.choisir_fichier, width=20).grid(row=1, column=1, pady=10, sticky="nsew")
+        # Button to select file
+        tk.Button(self, text="Choose CSV File", command=self.choose_file, width=20).grid(row=1, column=1, pady=10, sticky="nsew")
 
-        # Ajouter un menu déroulant pour les catégories professionnelles
-        self.label_categorie = tk.Label(self, text="Choisissez une catégorie :")
+        # Dropdown for professional categories
+        self.label_categorie = tk.Label(self, text="Choose a category:")
         self.label_categorie.grid(row=2, column=1, pady=10, sticky="nsew")
 
         self.categorie_var = tk.StringVar()
         if self.categories_pro:
-            self.categorie_var.set(list(self.categories_pro.keys())[0])  # Valeur par défaut
+            self.categorie_var.set(list(self.categories_pro.keys())[0])
             self.menu_categorie = tk.OptionMenu(self, self.categorie_var, *self.categories_pro.keys())
-            self.menu_categorie.config(width=20)  # Fixer la largeur du menu déroulant
+            self.menu_categorie.config(width=20)
             self.menu_categorie.grid(row=3, column=1, pady=10, sticky="nsew")
         else:
-            self.categorie_var.set("Aucune catégorie trouvée")
-            self.menu_categorie = tk.OptionMenu(self, self.categorie_var, "Aucune catégorie")
-            self.menu_categorie.config(width=20)  # Fixer la largeur du menu déroulant
+            self.categorie_var.set("No category found")
+            self.menu_categorie = tk.OptionMenu(self, self.categorie_var, "No category")
+            self.menu_categorie.config(width=20)
             self.menu_categorie.grid(row=3, column=1, pady=10, sticky="nsew")
 
-        # Bouton pour nettoyer le fichier (désactivé au début)
-        self.btn_nettoyer = tk.Button(self, text="Nettoyer le fichier", command=self.nettoyer_csv, state=tk.DISABLED, width=20)
+        # Button to clean file (initially disabled)
+        self.btn_nettoyer = tk.Button(self, text="Clean File", command=self.clean_csv, state=tk.DISABLED, width=20)
         self.btn_nettoyer.grid(row=5, column=1, pady=20, sticky="nsew")
 
-    def charger_specialites(self):
-        """Charge les groupes de spécialités depuis le Google Sheets et retourne un dictionnaire."""
+    def load_specialties(self):
+        """Load specialty groups from Google Sheets."""
         try:
             df_specialites = pd.read_csv(specialites_url)
 
-            # Nettoyer les données
+            # Clean data
             for col in df_specialites.columns:
                 if df_specialites[col].dtype == 'object':
                     df_specialites[col] = df_specialites[col].apply(lambda x: x.strip() if isinstance(x, str) else x)
@@ -58,97 +58,102 @@ class Application(tk.Tk):
             categories_pro = {col: df_specialites[col].dropna().tolist() for col in df_specialites.columns}
             return categories_pro
         except Exception as e:
-            messagebox.showerror("Erreur", f"Impossible de charger les spécialités depuis Google Sheets : {e}")
+            messagebox.showerror("Error", f"Failed to load specialties: {e}")
             return {}
 
-    def choisir_fichier(self):
+    def choose_file(self):
+        """Open file dialog to choose a CSV file."""
         self.fichier_csv = filedialog.askopenfilename(filetypes=[("CSV files", "*.csv")])
         if self.fichier_csv:
             self.btn_nettoyer.config(state=tk.NORMAL)
-            messagebox.showinfo("Fichier sélectionné", "Fichier CSV sélectionné : " + self.fichier_csv)
+            messagebox.showinfo("File Selected", "Selected CSV file: " + self.fichier_csv)
 
-    def nettoyer_csv(self):
+    def clean_csv(self):
+        """Clean the CSV file."""
         try:
-            # Lire la blacklist
+            # Load blacklist
             df_blacklist = pd.read_csv(blacklist_url)
-            df_blacklist = df_blacklist.applymap(lambda x: x.strip() if isinstance(x, str) else x)
 
-            # Extraire les données de la blacklist
+            # Clean blacklist data
+            df_blacklist = df_blacklist.apply(lambda col: col.map(lambda x: x.strip() if isinstance(x, str) else x))
+
+            # Extract blacklist data
             blacklist_emails = df_blacklist['mail'].dropna().astype(str).tolist()
             blacklist_domains = df_blacklist['domaine'].dropna().astype(str).tolist()
             blacklist_tri_mail = df_blacklist['tri_mail'].dropna().astype(str).tolist()
 
-            # Charger le fichier CSV et nettoyer les colonnes
-            separateur = self.detecter_separateur(self.fichier_csv)
-            df = pd.read_csv(self.fichier_csv, sep=separateur)
-            df = df.applymap(lambda x: x.strip() if isinstance(x, str) else x)
+            # Load and clean CSV file
+            separator = self.detect_separator(self.fichier_csv)
+            df = pd.read_csv(self.fichier_csv, sep=separator)
+            df = df.apply(lambda col: col.map(lambda x: x.strip() if isinstance(x, str) else x))
 
-            # Colonnes à garder
-            colonnes_necessaires = ['title', 'cid', 'address', 'categories/0', 'city', 'location/lat',
-                                    'location/lng', 'phone', 'url', 'website', 'contactDetails/emails/0',
-                                    'contactDetails/emails/1', 'contactDetails/emails/2']
-            colonnes_necessaires = [col for col in colonnes_necessaires if col in df.columns]
-            if not colonnes_necessaires:
-                raise ValueError("Aucune colonne nécessaire trouvée dans le fichier CSV.")
-            df = df[colonnes_necessaires].drop_duplicates()
+            # Columns to keep
+            necessary_columns = ['title', 'cid', 'address', 'categories/0', 'city', 'location/lat',
+                                 'location/lng', 'phone', 'url', 'website', 'contactDetails/emails/0',
+                                 'contactDetails/emails/1', 'contactDetails/emails/2']
+            necessary_columns = [col for col in necessary_columns if col in df.columns]
+            if not necessary_columns:
+                raise ValueError("No necessary columns found in CSV file.")
+            df = df[necessary_columns].drop_duplicates()
 
-            # Filtrer selon la catégorie sélectionnée
-            categorie_choisie = self.categorie_var.get()
-            categories_a_garder = self.categories_pro.get(categorie_choisie, [])
-            df = df[df['categories/0'].isin(categories_a_garder)]
+            # Filter by selected category
+            chosen_category = self.categorie_var.get()
+            categories_to_keep = self.categories_pro.get(chosen_category, [])
+            df = df[df['categories/0'].isin(categories_to_keep)]
 
-            # Filtrer les lignes en fonction des emails et domaines dans la blacklist
-            def filter_row(row):
-                # Vérifier les emails dans les trois colonnes
+            # 1. Filter out blacklisted emails and domains
+            def filter_rows(row):
                 for email_col in ['contactDetails/emails/0', 'contactDetails/emails/1', 'contactDetails/emails/2']:
                     if email_col in row and pd.notna(row[email_col]):
                         email = row[email_col]
-                        domain = email.split('@')[-1] if '@' in email else ''
+                        domain = email.split('@')[-1]
 
-                        # 1. Vérifier si l'email exact est dans la colonne "mail" de la blacklist => suppression de la ligne
-                        if email in blacklist_emails:
-                            return None  # Si trouvé, la ligne est supprimée (None pour marquer la ligne à supprimer)
+                        if email in blacklist_emails or any(bl_domain in domain for bl_domain in blacklist_domains):
+                            return False
 
-                        # 2. Vérifier si le domaine est dans la colonne "domaine" de la blacklist => suppression de la ligne
-                        if any(bl_domain in domain for bl_domain in blacklist_domains):
-                            return None  # Si trouvé, la ligne est supprimée
+                return True
 
-                        # 3. Vérifier si un morceau de "tri_mail" est dans l'email => suppression de la cellule (pas de la ligne)
-                        if any(bl_item in email for bl_item in blacklist_tri_mail):
-                            row[email_col] = None  # Efface uniquement l'email dans la cellule concernée
+            df_filtered = df[df.apply(filter_rows, axis=1)]
+
+            # 2. Replace emails containing parts of tri_mail
+            def replace_tri_mail(row):
+                for email_col in ['contactDetails/emails/0', 'contactDetails/emails/1', 'contactDetails/emails/2']:
+                    if email_col in row and pd.notna(row[email_col]):
+                        email = row[email_col]
+                        if any(bl_tri in email for bl_tri in blacklist_tri_mail):
+                            row[email_col] = None
 
                 return row
 
-            # Appliquer le filtrage et supprimer les lignes marquées pour suppression
-            df_nettoye = df.apply(filter_row, axis=1).dropna(how='any')
+            df_cleaned = df_filtered.apply(replace_tri_mail, axis=1)
 
-            # Sauvegarde du fichier nettoyé
-            fichier_nettoye = self.sauvegarder_fichier(df_nettoye)
-            messagebox.showinfo("Succès", f"Fichier nettoyé enregistré sous : {fichier_nettoye}")
+            # Save cleaned file
+            cleaned_file = self.save_file(df_cleaned)
+            messagebox.showinfo("Success", f"Cleaned file saved as: {cleaned_file}")
 
         except Exception as e:
-            messagebox.showerror("Erreur", f"Une erreur est survenue : {e}")
+            messagebox.showerror("Error", f"An error occurred: {e}")
 
-    def detecter_separateur(self, fichier):
-        """Détecte le séparateur utilisé dans le fichier CSV."""
-        with open(fichier, 'r', encoding='utf-8') as file:
-            lignes = [file.readline() for _ in range(5)]
-        compte_separateurs = {sep: sum(ligne.count(sep) for ligne in lignes) for sep in [',', ';', '\t']}
-        return max(compte_separateurs, key=compte_separateurs.get)
+    def detect_separator(self, file):
+        """Detect the CSV separator."""
+        with open(file, 'r', encoding='utf-8') as f:
+            lines = [f.readline() for _ in range(5)]
+        sep_count = {sep: sum(line.count(sep) for line in lines) for sep in [',', ';', '\t']}
+        return max(sep_count, key=sep_count.get)
 
-    def sauvegarder_fichier(self, df):
-        """Sauvegarde le fichier sur le bureau."""
-        bureau = os.path.join(os.path.expanduser('~'), 'Desktop')
+    def save_file(self, df):
+        """Save cleaned file to desktop."""
+        desktop = os.path.join(os.path.expanduser('~'), 'Desktop')
         base, ext = os.path.splitext(os.path.basename(self.fichier_csv))
-        fichier_nettoye = os.path.join(bureau, f"{base}_CLEAN{ext}")
+        cleaned_file = os.path.join(desktop, f"{base}_CLEAN{ext}")
 
-        # Ajouter suffixe en cas de conflit de nom
-        suffixe = 1
-        while os.path.exists(fichier_nettoye):
-            fichier_nettoye = os.path.join(bureau, f"{base}_CLEAN_{suffixe}{ext}")
-            suffixe += 1
-        df.to_csv(fichier_nettoye, index=False)
-        return fichier_nettoye
+        # Add suffix if name conflict
+        suffix = 1
+        while os.path.exists(cleaned_file):
+            cleaned_file = os.path.join(desktop, f"{base}_CLEAN_{suffix}{ext}")
+            suffix += 1
+        df.to_csv(cleaned_file, index=False)
+        return cleaned_file
 
 if __name__ == "__main__":
     app = Application()
