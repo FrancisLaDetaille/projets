@@ -31,6 +31,15 @@ class CSVSorterApp(tk.Tk):
             self.btn_sort_file.config(state=tk.NORMAL)
             messagebox.showinfo("File Selected", f"CSV file selected: {self.file_path}")
 
+    def get_unique_filepath(self, base_path):
+        """Generate a unique file path by adding suffix if file exists."""
+        counter = 1
+        file_path = base_path
+        while os.path.exists(file_path):
+            file_path = f"{os.path.splitext(base_path)[0]}_{counter}.csv"
+            counter += 1
+        return file_path
+
     def process_csv(self):
         """Process and split the CSV based on criteria."""
         try:
@@ -63,16 +72,17 @@ class CSVSorterApp(tk.Tk):
             # Save files to desktop
             desktop_path = os.path.join(os.path.expanduser("~"), "Desktop")
 
+            # Generate unique file paths
             # File 1: More than 300 reviews and score > 4 with email -> "nomdufichier Lisa Mail.csv"
-            output_file_1 = os.path.join(desktop_path, f"{original_filename} Lisa Mail.csv")
+            output_file_1 = self.get_unique_filepath(os.path.join(desktop_path, f"{original_filename} Lisa Mail.csv"))
             df_filtered_1.to_csv(output_file_1, index=False)
 
             # File 2: Others with email -> "nomdufichier Mails Trust.csv"
-            output_file_2 = os.path.join(desktop_path, f"{original_filename} Mails Trust.csv")
+            output_file_2 = self.get_unique_filepath(os.path.join(desktop_path, f"{original_filename} Mails Trust.csv"))
             df_filtered_2.to_csv(output_file_2, index=False)
 
             # File 3: Without email -> "nomdufichier Cold Call.csv"
-            output_file_3 = os.path.join(desktop_path, f"{original_filename} Cold Call.csv")
+            output_file_3 = self.get_unique_filepath(os.path.join(desktop_path, f"{original_filename} Cold Call.csv"))
             df_filtered_3.to_csv(output_file_3, index=False)
 
             # Success message
