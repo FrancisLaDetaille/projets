@@ -81,19 +81,26 @@ class Application(tk.Tk):
             blacklist_emails = df_blacklist['mail'].dropna().astype(str).tolist()
             blacklist_domains = df_blacklist['domaine'].dropna().astype(str).tolist()
             blacklist_tri_mail = df_blacklist['tri_mail'].dropna().astype(str).tolist()
+            blacklist_phones = df_blacklist['phone'].dropna().astype(str).tolist()  # Ajout de la blacklist des numéros de téléphone
 
             # Load and clean CSV file
             separator = self.detect_separator(self.fichier_csv)
-            df = pd.read_csv(self.fichier_csv, sep=separator)
+
+            # Force all columns to be read as strings to avoid DtypeWarning and ensure low_memory is set to False
+            df = pd.read_csv(self.fichier_csv, sep=separator, low_memory=False, dtype=str)
+
+            # Clean data by stripping whitespace
             df = df.apply(lambda col: col.map(lambda x: x.strip() if isinstance(x, str) else x))
 
             # Columns to keep
             necessary_columns = ['title', 'cid', 'address', 'categories/0', 'city', 'location/lat',
                                  'location/lng', 'phone', 'url', 'website', 'contactDetails/emails/0',
-                                 'contactDetails/emails/1', 'contactDetails/emails/2']
+                                 'contactDetails/emails/1', 'contactDetails/emails/2', 'reviewsCount', 'totalScore']
             necessary_columns = [col for col in necessary_columns if col in df.columns]
+
             if not necessary_columns:
                 raise ValueError("No necessary columns found in CSV file.")
+
             df = df[necessary_columns].drop_duplicates()
 
             # Filter by selected category
@@ -101,8 +108,9 @@ class Application(tk.Tk):
             categories_to_keep = self.categories_pro.get(chosen_category, [])
             df = df[df['categories/0'].isin(categories_to_keep)]
 
-            # 1. Filter out blacklisted emails and domains
+            # 1. Filter out blacklisted emails, domains, and phone numbers
             def filter_rows(row):
+                # Vérification des emails et domaines
                 for email_col in ['contactDetails/emails/0', 'contactDetails/emails/1', 'contactDetails/emails/2']:
                     if email_col in row and pd.notna(row[email_col]):
                         email = row[email_col]
@@ -110,6 +118,12 @@ class Application(tk.Tk):
 
                         if email in blacklist_emails or any(bl_domain in domain for bl_domain in blacklist_domains):
                             return False
+
+                # Vérification des numéros de téléphone
+                if 'phone' in row and pd.notna(row['phone']):
+                    phone = row['phone']
+                    if phone in blacklist_phones:
+                        return False
 
                 return True
 
@@ -133,6 +147,7 @@ class Application(tk.Tk):
 
         except Exception as e:
             messagebox.showerror("Error", f"An error occurred: {e}")
+
 
     def detect_separator(self, file):
         """Detect the CSV separator."""
