@@ -43,8 +43,8 @@ class CSVSorterApp(tk.Tk):
     def process_csv(self):
         """Process and split the CSV based on criteria."""
         try:
-            # Load CSV file
-            df = pd.read_csv(self.file_path)
+            # Load CSV file, handling bad lines and potential issues with delimiters
+            df = pd.read_csv(self.file_path, on_bad_lines='skip', sep=',')  # Adjust separator if necessary
 
             # Check required columns
             required_columns = ['reviewsCount', 'totalScore', 'contactDetails/emails/0']
