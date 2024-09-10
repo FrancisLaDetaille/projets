@@ -57,19 +57,22 @@ class CSVSorterApp(tk.Tk):
             # 3. Without email
             df_filtered_3 = df[df['contactDetails/emails/0'].isna()]
 
+            # Get the original filename without extension
+            original_filename = os.path.splitext(os.path.basename(self.file_path))[0]
+
             # Save files to desktop
             desktop_path = os.path.join(os.path.expanduser("~"), "Desktop")
 
-            # File 1: More than 300 reviews and score > 4 with email
-            output_file_1 = os.path.join(desktop_path, "LisaCare mail.csv")
+            # File 1: More than 300 reviews and score > 4 with email -> "nomdufichier Lisa Mail.csv"
+            output_file_1 = os.path.join(desktop_path, f"{original_filename} Lisa Mail.csv")
             df_filtered_1.to_csv(output_file_1, index=False)
 
-            # File 2: Others with email
-            output_file_2 = os.path.join(desktop_path, "Mails pour Trust.csv")
+            # File 2: Others with email -> "nomdufichier Mails Trust.csv"
+            output_file_2 = os.path.join(desktop_path, f"{original_filename} Mails Trust.csv")
             df_filtered_2.to_csv(output_file_2, index=False)
 
-            # File 3: Without email
-            output_file_3 = os.path.join(desktop_path, "Tel.csv")
+            # File 3: Without email -> "nomdufichier Cold Call.csv"
+            output_file_3 = os.path.join(desktop_path, f"{original_filename} Cold Call.csv")
             df_filtered_3.to_csv(output_file_3, index=False)
 
             # Success message
